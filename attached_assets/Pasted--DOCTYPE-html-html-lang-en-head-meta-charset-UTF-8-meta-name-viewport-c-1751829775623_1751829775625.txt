@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CrystalMind - AI Scenario Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
+        }
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #2d1b69 0%, #4c2885 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #a777e3;
+            border: 3px solid white;
+        }
+        .dark .timeline-item::before {
+            border-color: #181818;
+        }
+        .timeline-connector {
+            position: absolute;
+            left: -18px;
+            top: 15px;
+            bottom: -15px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .dark .timeline-connector {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg text-white dark:text-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex flex-col lg:flex-row justify-between items-center mb-12">
+            <div class="flex flex-col sm:flex-row items-center mb-4 lg:mb-0">
+                <div class="flex items-center mb-4 sm:mb-0 sm:mr-6">
+                    <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-4">
+                        <i class="fas fa-crystal text-2xl text-purple-600"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold">CrystalMind</h1>
+                </div>
+                <div class="relative flex items-center space-x-4">
+                    <input
+                        type="password"
+                        id="apiKeyInput"
+                        placeholder="Groq API Key"
+                        class="bg-gray-800 bg-opacity-50 rounded-lg px-4 py-2 text-white dark:text-gray-100 placeholder-gray-400 text-base w-64"
+                    />
+                    <button
+                        id="saveKeyBtn"
+                        class="text-gray-400 hover:text-white"
+                        title="Save API Key for this session"
+                    >
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <select
+                        id="modelSelect"
+                        class="bg-gray-800 bg-opacity-50 rounded-lg px-3 py-2 text-white dark:text-gray-100 text-sm"
+                        title="Select Groq Model"
+                    >
+                        <option value="llama-3.3-70b-versatile" selected>Standard Model</option>
+                        <option value="compound-beta">Agentic Tooling (compound-beta)</option>
+                        <option value="compound-beta-mini">Agentic Tooling Mini (compound-beta-mini)</option>
+                    </select>
+                </div>
+            </div>
+            <nav class="flex space-x-6">
+                <a href="#" class="hover:text-purple-200 transition text-sm">Home</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">Examples</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">About</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">API</a>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <section class="glass-effect rounded-xl p-8 mb-12">
+                <h2 class="text-2xl font-bold mb-4">🔮 Simulate Any Future Scenario</h2>
+                <p class="mb-6 text-gray-100 dark:text-gray-200">
+                    Enter a hypothetical scenario and CrystalMind will analyze potential outcomes using Groq's AI and visualize the results.
+                </p>
+                <p class="mb-6 text-sm text-gray-300 dark:text-gray-400">
+                    Select the model to use for analysis. Agentic Tooling models can perform real-time web search and code execution for enhanced results.
+                </p>
+
+                <div class="relative mb-6">
+                    <textarea
+                        id="scenarioInput"
+                        class="w-full bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 text-white dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        rows="4"
+                        placeholder="Example: 'What if AI achieves human-level consciousness by 2030?'"
+                    ></textarea>
+                    <div class="absolute right-4 bottom-4 flex items-center">
+                        <button id="clearBtn" class="text-gray-400 hover:text-white mr-2">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button
+                            id="submitBtn"
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        >
+                            <i class="fas fa-play mr-2"></i> Simulate
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="enableVideo" class="mr-2" checked />
+                        <label for="enableVideo" class="text-sm">Enable Video Visualization</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="realTimeSearch" class="mr-2" checked />
+                        <label for="realTimeSearch" class="text-sm">Real-time Web Validation</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="hidden glass-effect rounded-xl p-8 mb-12 fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Scenario Analysis</h2>
+                    <button id="newScenarioBtn" class="text-purple-300 hover:text-white flex items-center">
+                        <i class="fas fa-plus mr-2"></i> New Scenario
+                    </button>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Original Scenario</h3>
+                    <p id="scenarioText" class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 italic"></p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Key Entities & Relationships</h3>
+                    <div id="entitiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Entities will be added here by JS -->
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Predicted Timeline</h3>
+                    <div id="timeline" class="relative pl-8">
+                        <!-- Timeline items will be added here by JS -->
+                    </div>
+                </div>
+
+                <div id="videoSection" class="hidden">
+                    <h3 class="text-xl font-semibold mb-4">Scenario Visualization</h3>
+                    <div id="videoGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Video cards will be added here by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Example Scenarios -->
+            <section class="glass-effect rounded-xl p-8">
+                <h2 class="text-2xl font-bold mb-6">Example Scenarios</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div
+                        class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer example-scenario"
+                        data-scenario="If Meta open-sources AGI models in 2026, what would be the impact on global AI development and regulation?"
+                    >
+                        <h3 class="font-semibold mb-2">Tech Regulation</h3>
+                        <p class="text-sm text-gray-300 dark:text-gray-400">"If Meta open-sources AGI models in 2026..."</p>
+                    </div>
+                    <div
+                        class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer example-scenario"
+                        data-scenario="What if the U.S. bans AI chip exports to China completely by 2025?"
+                    >
+                        <h3 class="font-semibold mb-2">Economic Impact</h3>
+        <p class="text-sm text-gray-300 dark:text-gray-400">"What if U.S. bans AI chip exports to China?"</p>
+                    </div>
+                    <div
+                        class="bg-gray-8
+</think>
+The file creation was interrupted. I'll now create the complete CrystalMind.html file with the Groq agentic tooling integration:
+
+<create_file>
+<path>CrystalMind.html</path>
+<content>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CrystalMind - AI Scenario Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #6e8efb 0%, #a777e3 100%);
+        }
+        .dark .gradient-bg {
+            background: linear-gradient(135deg, #2d1b69 0%, #4c2885 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #a777e3;
+            border: 3px solid white;
+        }
+        .dark .timeline-item::before {
+            border-color: #181818;
+        }
+        .timeline-connector {
+            position: absolute;
+            left: -18px;
+            top: 15px;
+            bottom: -15px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .dark .timeline-connector {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg text-white dark:text-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex flex-col lg:flex-row justify-between items-center mb-12">
+            <div class="flex flex-col sm:flex-row items-center mb-4 lg:mb-0">
+                <div class="flex items-center mb-4 sm:mb-0 sm:mr-6">
+                    <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center mr-4">
+                        <i class="fas fa-crystal text-2xl text-purple-600"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold">CrystalMind</h1>
+                </div>
+                <div class="relative flex items-center space-x-4">
+                    <input
+                        type="password"
+                        id="apiKeyInput"
+                        placeholder="Groq API Key"
+                        class="bg-gray-800 bg-opacity-50 rounded-lg px-4 py-2 text-white dark:text-gray-100 placeholder-gray-400 text-base w-64"
+                    />
+                    <button
+                        id="saveKeyBtn"
+                        class="text-gray-400 hover:text-white"
+                        title="Save API Key for this session"
+                    >
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <select
+                        id="modelSelect"
+                        class="bg-gray-800 bg-opacity-50 rounded-lg px-3 py-2 text-white dark:text-gray-100 text-sm"
+                        title="Select Groq Model"
+                    >
+                        <option value="llama-3.3-70b-versatile" selected>Standard Model</option>
+                        <option value="compound-beta">Agentic Tooling (compound-beta)</option>
+                        <option value="compound-beta-mini">Agentic Tooling Mini (compound-beta-mini)</option>
+                    </select>
+                </div>
+            </div>
+            <nav class="flex space-x-6">
+                <a href="#" class="hover:text-purple-200 transition text-sm">Home</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">Examples</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">About</a>
+                <a href="#" class="hover:text-purple-200 transition text-sm">API</a>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <section class="glass-effect rounded-xl p-8 mb-12">
+                <h2 class="text-2xl font-bold mb-4">🔮 Simulate Any Future Scenario</h2>
+                <p class="mb-6 text-gray-100 dark:text-gray-200">
+                    Enter a hypothetical scenario and CrystalMind will analyze potential outcomes using Groq's AI and visualize the results.
+                </p>
+                <p class="mb-6 text-sm text-gray-300 dark:text-gray-400">
+                    Select the model to use for analysis. Agentic Tooling models can perform real-time web search and code execution for enhanced results.
+                </p>
+
+                <div class="relative mb-6">
+                    <textarea
+                        id="scenarioInput"
+                        class="w-full bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 text-white dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        rows="4"
+                        placeholder="Example: 'What if AI achieves human-level consciousness by 2030?'"
+                    ></textarea>
+                    <div class="absolute right-4 bottom-4 flex items-center">
+                        <button id="clearBtn" class="text-gray-400 hover:text-white mr-2">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button
+                            id="submitBtn"
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition"
+                        >
+                            <i class="fas fa-play mr-2"></i> Simulate
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="enableVideo" class="mr-2" checked />
+                        <label for="enableVideo" class="text-sm">Enable Video Visualization</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="realTimeSearch" class="mr-2" checked />
+                        <label for="realTimeSearch" class="text-sm">Real-time Web Validation</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="hidden glass-effect rounded-xl p-8 mb-12 fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Scenario Analysis</h2>
+                    <button id="newScenarioBtn" class="text-purple-300 hover:text-white flex items-center">
+                        <i class="fas fa-plus mr-2"></i> New Scenario
+                    </button>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Original Scenario</h3>
+                    <p id="scenarioText" class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 italic"></p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Key Entities & Relationships</h3>
+                    <div id="entitiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Entities will be added here by JS -->
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4">Predicted Timeline</h3>
+                    <div id="timeline" class="relative pl-8">
+                        <!-- Timeline items will be added here by JS -->
+                    </div>
+                </div>
+
+                <div id="videoSection" class="hidden">
+                    <h3 class="text-xl font-semibold mb-4">Scenario Visualization</h3>
+                    <div id="videoGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Video cards will be added here by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Example Scenarios -->
+            <section class="glass-effect rounded-xl p-8">
+                <h2 class="text-2xl font-bold mb-6">Example Scenarios</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div
+                        class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer example-scenario"
+                        data-scenario="If Meta open-sources AGI models in 2026, what would be the impact on global AI development and regulation?"
+                    >
+                        <h3 class="font-semibold mb-2">Tech Regulation</h3>
+                        <p class="text-sm text-gray-300 dark:text-gray-400">"If Meta open-sources AGI models in 2026..."</p>
+                    </div>
+                    <div
+                        class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer example-scenario"
+                        data-scenario="What if the U.S. bans AI chip exports to China completely by 2025?"
+                    >
+                        <h3 class="font-semibold mb-2">Economic Impact</h3>
+                        <p class="text-sm text-gray-300 dark:text-gray-400">"What if U.S. bans AI chip exports to China?"</p>
+                    </div>
+                    <div
+                        class="bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4 hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer example-scenario"
+                        data-scenario="What would happen if Universal Basic Income is adopted globally by 2035?"
+                    >
+                        <h3 class="font-semibold mb-2">Social Change</h3>
+                        <p class="text-sm text-gray-300 dark:text-gray-400">"Effects of universal basic income adoption by 2035"</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-16 text-center text-gray-300 dark:text-gray-400 text-sm">
+            <div class="mb-4">
+                <span class="mr-4">Powered by</span>
+                <span class="inline-flex items-center mr-4">
+                    <i class="fas fa-bolt mr-1 text-yellow-400"></i> Groq
+                </span>
+                <span class="inline-flex items-center">
+                    <i class="fas fa-film mr-1 text-blue-400"></i> Minimax
+                </span>
+            </div>
+            <p>© 2024 CrystalMind - AI Scenario Simulator</p>
+        </footer>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // DOM Elements
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveKeyBtn = document.getElementById('saveKeyBtn');
+            const scenarioInput = document.getElementById('scenarioInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const newScenarioBtn = document.getElementById('newScenarioBtn');
+            const resultsSection = document.getElementById('resultsSection');
+            const scenarioText = document.getElementById('scenarioText');
+            const entitiesGrid = document.getElementById('entitiesGrid');
+            const timeline = document.getElementById('timeline');
+            const videoSection = document.getElementById('videoSection');
+            const videoGrid = document.getElementById('videoGrid');
+            const enableVideo = document.getElementById('enableVideo');
+            const exampleScenarios = document.querySelectorAll('.example-scenario');
+            const modelSelect = document.getElementById('modelSelect');
+
+            // Event Listeners
+            submitBtn.addEventListener('click', processScenario);
+            clearBtn.addEventListener('click', clearInput);
+            newScenarioBtn.addEventListener('click', resetForm);
+            scenarioInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    processScenario();
+                }
+            });
+
+            // Save API key (note: localStorage not available in iframe, using sessionStorage alternative)
+            saveKeyBtn.addEventListener('click', function () {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    // Store in a global variable since localStorage isn't available
+                    window.groqApiKey = key;
+                    showNotification('API key saved for this session!');
+                } else {
+                    showNotification('Please enter a valid API key', 'error');
+                }
+            });
+
+            // Example scenario click handlers
+            exampleScenarios.forEach(example => {
+                example.addEventListener('click', function () {
+                    const scenario = example.getAttribute('data-scenario');
+                    scenarioInput.value = scenario;
+                });
+            });
+
+            // Functions
+            async function processScenario() {
+                const scenario = scenarioInput.value.trim();
+                if (!scenario) {
+                    showNotification('Please enter a scenario', 'error');
+                    return;
+                }
+
+                const apiKey = window.groqApiKey || apiKeyInput.value.trim();
+                if (!apiKey) {
+                    showNotification('Please enter your Groq API key first', 'error');
+                    return;
+                }
+
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Analyzing...';
+                submitBtn.disabled = true;
+
+                try {
+                    // Analyze entities and relationships
+                    console.log('Analyzing entities...');
+                    const entitiesResponse = await analyzeWithGroq(apiKey, scenario, `
+                        Analyze this scenario and identify the key entities and their relationships.
+                        Return a JSON array with objects containing: name, type, impact (High/Medium/Low), and description.
+                        Example format: [{"name": "AI Industry", "type": "Technology", "impact": "High", "description": "Primary sector affected by this change"}]
+                        Provide exactly 4-6 entities. Return ONLY the JSON array, no other text.
+                    `);
+
+                    // Predict timeline
+                    console.log('Predicting timeline...');
+                    const timelineResponse = await analyzeWithGroq(apiKey, scenario, `
+                        Predict a realistic timeline of events that would result from this scenario.
+                        Return a JSON array with objects containing: time, event, likelihood, description.
+                        Example format: [{"time": "2025-2026", "event": "Initial Impact", "likelihood": "85%", "description": "Detailed description of what happens"}]
+                        Provide exactly 4-5 timeline events. Return ONLY the JSON array, no other text.
+                    `);
+
+                    // Generate video prompts (if enabled)
+                    let videosResponse = [];
+                    if (enableVideo.checked) {
+                        console.log('Generating video prompts...');
+                        const videoPromptsResponse = await analyzeWithGroq(apiKey, scenario, `
+                            Generate short video scene prompts that would visualize this scenario.
+                            Return a JSON array with objects containing: title, description.
+                            Example format: [{"title": "Opening Scene", "description": "A bustling tech office with developers working on AI models"}]
+                            Provide exactly 3-4 video scenes. Return ONLY the JSON array, no other text.
+                        `);
+                        videosResponse = videoPromptsResponse;
+                    }
+
+                    displayResults(scenario, {
+                        entities: entitiesResponse,
+                        timeline: timelineResponse,
+                        videos: videosResponse
+                    });
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Error processing scenario. Please check your API key and try again.', 'error');
+                } finally {
+                    submitBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Simulate';
+                    submitBtn.disabled = false;
+                }
+            }
+
+            async function analyzeWithGroq(apiKey, scenario, instruction) {
+                const selectedModel = modelSelect.value || "llama-3.3-70b-versatile";
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            {
+                                role: "system",
+                                content: "You are a scenario analysis AI. " + instruction
+                            },
+                            {
+                                role: "user",
+                                content: scenario
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const content = data.choices[0].message.content.trim();
+                
+                // Try to extract JSON from the response
+                try {
+                    // Remove any markdown code block formatting
+                    const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                    return JSON.parse(cleanContent);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', content);
+                    throw new Error('Invalid JSON response from API');
+                }
+            }
+
+            function displayResults(scenario, results) {
+                // Set scenario text
+                scenarioText.textContent = scenario;
+                
+                // Populate entities
+                entitiesGrid.innerHTML = '';
+                if (results.entities && Array.isArray(results.entities)) {
+                    results.entities.forEach(entity => {
+                        const entityCard = document.createElement('div');
+                        entityCard.className = 'bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg p-4';
+                        entityCard.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold">${entity.name}</h4>
+                                <span class="text-xs px-2 py-1 rounded-full ${getTypeColor(entity.type)}">${entity.type}</span>
+                            </div>
+                            <p class="text-sm text-gray-300 dark:text-gray-400 mb-2">${entity.description}</p>
+                            <div class="text-xs text-right">Impact: <span class="font-semibold ${getImpactColor(entity.impact)}">${entity.impact}</span></div>
+                        `;
+                        entitiesGrid.appendChild(entityCard);
+                    });
+                }
+                
+                // Populate timeline
+                timeline.innerHTML = '';
+                if (results.timeline && Array.isArray(results.timeline)) {
+                    results.timeline.forEach((item, index) => {
+                        const timelineItem = document.createElement('div');
+                        timelineItem.className = 'relative mb-8 timeline-item pl-6';
+                        
+                        // Add connector for all items except last
+                        if (index < results.timeline.length - 1) {
+                            const connector = document.createElement('div');
+                            connector.className = 'timeline-connector';
+                            timelineItem.appendChild(connector);
+                        }
+                        
+                        timelineItem.innerHTML = `
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-semibold">${item.time}</span>
+                                <span class="text-sm px-2 py-1 rounded-full bg-purple-900 bg-opacity-50">${item.likelihood}</span>
+                            </div>
+                            <h4 class="font-semibold text-lg mb-1">${item.event}</h4>
+                            <p class="text-gray-300 dark:text-gray-400">${item.description}</p>
+                        `;
+                        timeline.appendChild(timelineItem);
+                    });
+                }
+                
+                // Populate videos if enabled
+                if (enableVideo.checked && results.videos && Array.isArray(results.videos)) {
+                    videoSection.classList.remove('hidden');
+                    videoGrid.innerHTML = '';
+                    
+                    results.videos.forEach(video => {
+                        const videoCard = document.createElement('div');
+                        videoCard.className = 'bg-gray-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 rounded-lg overflow-hidden hover:bg-opacity-70 dark:hover:bg-opacity-90 transition cursor-pointer';
+                        videoCard.innerHTML = `
+                            <div class="aspect-video bg-black bg-opacity-30 flex items-center justify-center relative">
+                                <i class="fas fa-play-circle text-4xl text-white opacity-70"></i>
+                                <div class="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">15s</div>
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-semibold mb-1">${video.title}</h4>
+                                <p class="text-sm text-gray-300 dark:text-gray-400">${video.description}</p>
+                            </div>
+                        `;
+                        videoGrid.appendChild(videoCard);
+                    });
+                } else {
+                    videoSection.classList.add('hidden');
+                }
+                
+                // Show results section
+                resultsSection.classList.remove('hidden');
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function clearInput() {
+                scenarioInput.value = '';
+                scenarioInput.focus();
+            }
+
+            function resetForm() {
+                clearInput();
+                resultsSection.classList.add('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function getImpactColor(impact) {
+                switch(impact?.toLowerCase()) {
+                    case 'high': return 'text-red-400';
+                    case 'medium': return 'text-yellow-400';
+                    default: return 'text-green-400';
+                }
+            }
+
+            function getTypeColor(type) {
+                const colors = [
+                    'bg-blue-900 bg-opacity-50',
+                    'bg-green-900 bg-opacity-50',
+                    'bg-purple-900 bg-opacity-50',
+                    'bg-orange-900 bg-opacity-50',
+                    'bg-pink-900 bg-opacity-50'
+                ];
+                const hash = type?.split('').reduce((a, b) => {
+                    a = ((a << 5) - a) + b.charCodeAt(0);
+                    return a & a;
+                }, 0);
+                return colors[Math.abs(hash) % colors.length];
+            }
+
+            function showNotification(message, type = 'success') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white z-50 ${
+                    type === 'error' ? 'bg-red-600' : 'bg-green-600'
+                } opacity-0 transition-opacity duration-300`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // Show notification
+                setTimeout(() => notification.classList.remove('opacity-0'), 100);
+                
+                // Hide and remove notification
+                setTimeout(() => {
+                    notification.classList.add('opacity-0');
+                    setTimeout(() => document.body.removeChild(notification), 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
